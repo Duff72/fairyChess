@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fairy Chess — Forge Your Pieces</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;900&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header>
+  <h1>FAIRY CHESS</h1>
+  <div class="subtitle">Forge extraordinary pieces. Reshape the royal game.</div>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" onclick="switchTab('creator')">✦ Piece Forge</button>
+  <button class="tab-btn" onclick="switchTab('library')">⚔ Piece Library</button>
+  <button class="tab-btn" onclick="switchTab('game')">♟ Play Game</button>
+</div>
+
+<!-- ===================== PIECE CREATOR TAB ===================== -->
+<div id="tab-creator" class="panel active">
+  <div class="creator-layout">
+
+    <!-- Left: Basic info -->
+    <div class="creator-card">
+      <h2>⚗ Identity</h2>
+      <label>Piece Name</label>
+      <input type="text" id="piece-name" placeholder="e.g. Nightrider, Chancellor…" maxlength="30">
+
+      <label>Symbol (choose icon)</label>
+      <div class="emoji-row" id="emoji-picker">
+        <!-- filled by JS -->
+      </div>
+      <input type="text" id="piece-emoji" placeholder="Or type/paste any symbol" maxlength="2" style="width:70px;margin-bottom:1rem;">
+
+      <label>Abbreviation (1–2 chars)</label>
+      <input type="text" id="piece-abbr" placeholder="N" maxlength="2">
+
+      <label>Description (optional)</label>
+      <textarea id="piece-desc" rows="3" placeholder="Describe the piece's lore or tactical role…"></textarea>
+
+      <label>Value (pawns)</label>
+      <input type="number" id="piece-value" value="3" min="0" max="99" step="0.5">
+    </div>
+
+    <!-- Middle: Movement editor -->
+    <div class="creator-card">
+      <h2>🗺 Movement Pattern</h2>
+      <p class="info-text">Click cells to mark where this piece can move. Select a move type first, then paint the grid. The center ♟ is the piece's location.</p>
+
+      <div class="movement-label">Move Type</div>
+      <div class="move-type-row">
+        <button class="move-type-btn active" data-type="move"    onclick="setMoveType('move',this)">Step</button>
+        <button class="move-type-btn"         data-type="rider"  onclick="setMoveType('rider',this)">Rider (slides)</button>
+        <button class="move-type-btn"         data-type="leap"   onclick="setMoveType('leap',this)">Leap (jump)</button>
+        <button class="move-type-btn"         data-type="capture"onclick="setMoveType('capture',this)">Capture only</button>
+        <button class="move-type-btn"         data-type="clear"  onclick="setMoveType('clear',this)">Clear</button>
+      </div>
+
+      <div class="movement-grid-wrap">
+        <div class="mgrid" id="movement-grid"></div>
+      </div>
+
+      <div class="grid-legend">
+        <div class="legend-item"><div class="legend-dot move"></div> Step/Move</div>
+        <div class="legend-item"><div class="legend-dot rider"></div> Rider</div>
+        <div class="legend-item"><div class="legend-dot leap"></div> Leap</div>
+        <div class="legend-item"><div class="legend-dot capture"></div> Capture only</div>
+      </div>
+
+      <hr class="divider">
+
+      <label>Special abilities</label>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:1rem;">
+        <label class="radio-opt"><input type="checkbox" id="opt-royal"> Royal (losing it = losing the game)</label>
+        <label class="radio-opt"><input type="checkbox" id="opt-hop"> Hopper (jumps over pieces to capture)</label>
+        <label class="radio-opt"><input type="checkbox" id="opt-firstmove"> Extended first move (like pawn's double step)</label>
+      </div>
+
+      <div id="firstmove-extra" style="display:none;">
+        <label>First-move extra squares</label>
+        <input type="number" id="firstmove-extra-val" value="1" min="1" max="4">
+      </div>
+
+      <hr class="divider">
+
+      <div class="movement-label">Pawn Promotion</div>
+      <p class="info-text" style="margin-bottom:0.6rem;">Control how this piece interacts with promotion.</p>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;margin-bottom:0.5rem;">
+        <label class="radio-opt"><input type="checkbox" id="opt-promotable" checked> Can be promoted to (pawns can become this piece)</label>
+        <label class="radio-opt"><input type="checkbox" id="opt-promotes"> This piece can promote (promotes on back rank)</label>
+      </div>
+    </div>
+
+    <!-- Right: Preview + save -->
+    <div class="creator-card">
+      <h2>👁 Preview</h2>
+      <div id="piece-preview" style="text-align:center;margin-bottom:1.5rem;">
+        <div style="font-size:3.5rem;margin-bottom:0.5rem;" id="preview-symbol">♟</div>
+        <div style="font-family:'Cinzel',serif;color:var(--gold);font-size:1rem;letter-spacing:0.1em;" id="preview-name">New Piece</div>
+        <div style="font-size:0.82rem;color:var(--cream-dim);font-style:italic;margin-top:0.3rem;" id="preview-desc"></div>
+        <div class="tag-row" id="preview-tags" style="justify-content:center;margin-top:0.5rem;"></div>
+      </div>
+
+      <div id="movement-preview" style="margin-bottom:1.5rem;">
+        <div class="movement-label" style="text-align:center;margin-bottom:0.5rem;">Attack Range Preview</div>
+        <div style="display:flex;justify-content:center;">
+          <div class="mgrid" id="move-preview-grid" style="max-width:180px;pointer-events:none;"></div>
+        </div>
+      </div>
+
+      <hr class="divider">
+
+      <button class="btn-primary" onclick="savePiece()">✦ Save Piece to Library</button>
+      <button class="btn-secondary" onclick="clearEditor()" style="width:100%;margin-top:0.5rem;">Clear Editor</button>
+
+      <hr class="divider">
+
+      <h2 style="margin-bottom:0.8rem;">Load Template</h2>
+      <div style="display:flex;flex-direction:column;gap:0.4rem;">
+        <button class="btn-secondary" style="width:100%;" onclick="loadTemplate('chancellor')">Chancellor (R+N)</button>
+        <button class="btn-secondary" style="width:100%;" onclick="loadTemplate('archbishop')">Archbishop (B+N)</button>
+        <button class="btn-secondary" style="width:100%;" onclick="loadTemplate('nightrider')">Nightrider</button>
+        <button class="btn-secondary" style="width:100%;" onclick="loadTemplate('amazon')">Amazon (Q+N)</button>
+        <button class="btn-secondary" style="width:100%;" onclick="loadTemplate('camel')">Camel (3,1 Leaper)</button>
+        <button class="btn-secondary" style="width:100%;" onclick="loadTemplate('grasshopper')">Grasshopper</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== LIBRARY TAB ===================== -->
+<div id="tab-library" class="panel">
+  <div style="max-width:900px;margin:0 auto;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <h2 style="font-family:'Cinzel',serif;color:var(--gold);letter-spacing:0.15em;font-size:1.1rem;">⚔ PIECE LIBRARY</h2>
+      <span style="color:var(--cream-dim);font-style:italic;font-size:0.9rem;">
+        <span id="library-count">0</span> pieces in your collection
+      </span>
+    </div>
+    <div id="library-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;">
+      <div style="color:var(--cream-dim);font-style:italic;padding:2rem;text-align:center;grid-column:1/-1;">
+        No pieces yet. Visit the Piece Forge to create your first custom piece.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== GAME TAB ===================== -->
+<div id="tab-game" class="panel">
+  <div class="game-layout">
+
+    <!-- Left sidebar -->
+    <div id="left-panel">
+
+      <!-- SETUP MODE -->
+      <div id="setup-mode">
+        <div class="game-card" style="margin-bottom:1rem;">
+          <h3>⚙ Game Setup</h3>
+          <label>Starting Position</label>
+          <select id="variant-select" onchange="handleVariantChange()">
+            <option value="standard">Standard Chess</option>
+            <option value="custom">Custom Setup</option>
+            <option value="random">Random Fairy</option>
+          </select>
+          <button class="btn-primary" onclick="startGame()" style="margin-top:0.8rem;">♟ Start Game</button>
+        </div>
+
+        <!-- Custom Board Editor -->
+        <div id="board-editor-panel" style="display:none;">
+          <div class="game-card" style="margin-bottom:1rem;">
+            <h3>🎨 Piece Palette</h3>
+            <p class="info-text" style="margin-bottom:0.7rem;">Select a piece, choose a color, then click squares on the board to place it. Right-click a square to remove.</p>
+
+            <div style="display:flex;gap:0.5rem;margin-bottom:0.8rem;">
+              <button id="color-white-btn" class="btn-primary"    style="flex:1;font-size:0.7rem;" onclick="setPlacingColor('white')">⬜ White</button>
+              <button id="color-black-btn" class="btn-secondary"  style="flex:1;font-size:0.7rem;" onclick="setPlacingColor('black')">⬛ Black</button>
+            </div>
+
+            <div class="movement-label" style="margin-bottom:0.4rem;">Standard Pieces</div>
+            <div id="palette-standard" class="piece-palette"></div>
+
+            <div id="palette-custom-wrap" style="display:none;">
+              <div class="movement-label" style="margin:0.6rem 0 0.4rem;">Custom Pieces</div>
+              <div id="palette-custom" class="piece-palette"></div>
+            </div>
+
+            <hr class="divider">
+            <div style="display:flex;gap:0.4rem;flex-wrap:wrap;">
+              <button class="btn-secondary" style="flex:1;font-size:0.65rem;" onclick="resetEditorToStandard()">↺ Standard</button>
+              <button class="btn-secondary" style="flex:1;font-size:0.65rem;" onclick="clearEditorBoard()">✕ Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GAME MODE -->
+      <div id="game-mode" style="display:none;">
+        <div class="game-card" style="margin-bottom:1rem;">
+          <h3>📜 Captured Pieces</h3>
+          <div style="font-size:0.72rem;color:var(--cream-dim);margin-bottom:0.3rem;font-family:'Cinzel',serif;">WHITE CAPTURED</div>
+          <div class="captured-list" id="white-captured"></div>
+          <div style="font-size:0.72rem;color:var(--cream-dim);margin-bottom:0.3rem;font-family:'Cinzel',serif;margin-top:0.5rem;">BLACK CAPTURED</div>
+          <div class="captured-list" id="black-captured"></div>
+        </div>
+        <div class="game-card">
+          <h3>📖 Active Pieces</h3>
+          <div id="piece-legend" style="display:flex;flex-direction:column;gap:0.5rem;font-size:0.82rem;color:var(--cream-dim);">
+            Start a game to see active pieces.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center: Board -->
+    <div class="board-wrap">
+      <div class="status-bar" id="status-bar">Choose a variant and press Start, or use Custom Setup to place pieces</div>
+      <div class="board-container">
+        <div class="rank-labels" id="rank-labels"></div>
+        <div id="chess-board"></div>
+        <div class="file-labels" id="file-labels"></div>
+      </div>
+      <div id="game-controls" style="gap:0.5rem;margin-top:0.8rem;">
+        <button class="btn-secondary" onclick="undoMove()">↩ Undo</button>
+        <button class="btn-secondary" onclick="offerDraw()">≈ Draw</button>
+        <button class="btn-secondary" onclick="if(confirm('Resign?')) endGame(currentTurn==='white'?'black':'white','resignation')">⚑ Resign</button>
+        <button class="btn-secondary" onclick="returnToSetup()">⚙ Setup</button>
+      </div>
+    </div>
+
+    <!-- Right sidebar: Move history -->
+    <div>
+      <div class="game-card">
+        <h3>🕐 Move History</h3>
+        <div class="move-history" id="move-history">—</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== PROMOTION DIALOG ===================== -->
+<div class="promo-overlay" id="promo-overlay">
+  <div class="promo-box">
+    <h3>✦ PROMOTION</h3>
+    <p id="promo-subtitle">Choose a piece to promote your pawn to</p>
+    <div class="promo-choices" id="promo-choices"></div>
+  </div>
+</div>
+
+<!-- ===================== GAME OVER OVERLAY ===================== -->
+<div class="overlay" id="game-overlay">
+  <div class="overlay-box">
+    <h2 id="overlay-title">Checkmate!</h2>
+    <p id="overlay-msg">White wins the game.</p>
+    <button class="btn-primary" onclick="closeOverlay()" style="margin-right:1rem;width:auto;">Play Again</button>
+    <button class="btn-secondary" onclick="document.getElementById('game-overlay').classList.remove('show')">Dismiss</button>
+  </div>
+</div>
+
+<!-- Toast notification -->
+<div class="toast" id="toast"></div>
+
+<script src="game.js"></script>
+</body>
+</html>
