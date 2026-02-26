@@ -211,6 +211,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--gold-dim); }
 .mgrid-cell.leap    { background: rgba(138, 111, 46, 0.5);  border-color: var(--gold-dim); }
 .mgrid-cell.rider   { background: rgba(26, 58, 92, 0.6);    border-color: var(--blue-light); }
 .mgrid-cell.capture { background: rgba(139, 32, 32, 0.5);   border-color: var(--red-light); }
+.mgrid-cell.jump    { background: rgba(46, 125, 87, 0.28);  border-color: rgba(46,125,87,0.6); }
 
 .grid-legend {
   display: flex;
@@ -225,6 +226,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--gold-dim); }
 .legend-dot.rider   { background: rgba(26,58,92,0.6);   border-color: var(--blue-light); }
 .legend-dot.capture { background: rgba(139,32,32,0.5);  border-color: var(--red-light); }
 .legend-dot.leap    { background: rgba(138,111,46,0.5); border-color: var(--gold-dim); }
+.legend-dot.jump    { background: rgba(46,125,87,0.4);  border-color: rgba(46,125,87,0.6); }
 
 /* ===================== BUTTONS ===================== */
 .btn-primary {
@@ -655,6 +657,7 @@ input:focus, select:focus, textarea:focus { border-color: var(--gold-dim); }
 .tag.move    { border-color: var(--gold-dim);  color: var(--gold-dim); }
 .tag.rider   { border-color: var(--blue-light); color: var(--blue-light); }
 .tag.capture { border-color: var(--red-light);  color: var(--red-light); }
+.tag.jump    { border-color: rgba(46,125,87,0.8); color: rgba(46,125,87,0.9); }
 
 .info-text {
   font-size: 0.82rem;

@@ -80,6 +80,18 @@ function init() {
   document
     .getElementById("piece-desc")
     .addEventListener("input", updatePreview);
+  // show/hide promotes-to options and populate choices
+  const optPromotes = document.getElementById('opt-promotes');
+  if (optPromotes) {
+    optPromotes.addEventListener('change', e => {
+      const show = e.target.checked;
+      const el = document.getElementById('promotes-to-list');
+      if (el) el.style.display = show ? 'block' : 'none';
+      if (show) buildPromotesToOptions();
+    });
+    // populate once on init so options are visible when editor opens
+    buildPromotesToOptions();
+  }
 }
 
 window.addEventListener("DOMContentLoaded", init);
@@ -215,18 +227,21 @@ function updatePreview() {
   tags.innerHTML = "";
   let hasMoves = false,
     hasRider = false,
-    hasCapture = false;
+    hasCapture = false,
+    hasJump = false;
   for (let r = 0; r < 9; r++)
     for (let c = 0; c < 9; c++) {
       if (moveGrid[r][c] === "move" || moveGrid[r][c] === "leap")
         hasMoves = true;
       if (moveGrid[r][c] === "rider") hasRider = true;
       if (moveGrid[r][c] === "capture") hasCapture = true;
+      if (moveGrid[r][c] === "jump") hasJump = true;
     }
   if (hasMoves) tags.innerHTML += '<span class="tag move">Stepper</span>';
   if (hasRider) tags.innerHTML += '<span class="tag rider">Rider</span>';
   if (hasCapture)
     tags.innerHTML += '<span class="tag capture">Special Capture</span>';
+  if (hasJump) tags.innerHTML += '<span class="tag jump">Jumper</span>';
   if (document.getElementById("opt-royal").checked)
     tags.innerHTML += '<span class="tag move">Royal</span>';
 }
@@ -258,6 +273,14 @@ function savePiece() {
     (document.getElementById("opt-castling-role") &&
       document.getElementById("opt-castling-role").value) ||
     "none";
+  // gather promotesTo (checked promotion targets)
+  let promotesTo = [];
+  const optsContainer = document.getElementById("promotes-to-options");
+  if (optsContainer) {
+    optsContainer.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+      if (chk.checked) promotesTo.push(chk.value);
+    });
+  }
 
   const grid = moveGrid.map((row) => row.map((v) => v));
   if (!grid.some((row) => row.some((v) => v !== null))) {
@@ -278,6 +301,7 @@ function savePiece() {
     firstMoveExtra,
     promotable,
     promotes,
+    promotesTo,
     castlingRole,
     grid,
   };
@@ -285,6 +309,7 @@ function savePiece() {
   saveLibraryToStorage();
   renderLibrary();
   if (editorMode) buildPalette();
+  buildPromotesToOptions();
   showToast(`✦ "${name}" saved to library`);
 }
 
@@ -293,6 +318,7 @@ function deletePiece(id) {
   saveLibraryToStorage();
   renderLibrary();
   if (editorMode) buildPalette();
+  buildPromotesToOptions();
 }
 
 function saveLibraryToStorage() {
@@ -301,31 +327,67 @@ function saveLibraryToStorage() {
   } catch (e) {}
 }
 
+// Build the promotes-to checkbox list in the editor
+function buildPromotesToOptions() {
+  const wrap = document.getElementById('promotes-to-options');
+  if (!wrap) return;
+  wrap.innerHTML = '';
+  // candidates: standard pieces (Q,R,B,N) and all saved library pieces
+  const std = ['Q','R','B','N'];
+  std.forEach(k => {
+    const def = TEMPLATES[k] || STANDARD_PIECES[k];
+    if (!def) return;
+    const id = 'std_' + k;
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:0.4rem;background:var(--dark2);padding:0.25rem 0.5rem;border:1px solid var(--dark4)';
+    const chk = document.createElement('input');
+    chk.type = 'checkbox'; chk.value = k; chk.name = 'promote-target';
+    const span = document.createElement('span'); span.style.marginLeft='0.2rem'; span.textContent = `${def.symbol} ${def.name}`;
+    label.appendChild(chk); label.appendChild(span);
+    wrap.appendChild(label);
+  });
+  pieceLibrary.forEach(p => {
+    const type = 'fairy_' + p.id;
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:0.3rem;background:var(--dark2);padding:0.25rem 0.5rem;border:1px solid var(--dark4)';
+    const chk = document.createElement('input'); chk.type = 'checkbox'; chk.value = type; chk.name = 'promote-target';
+    const span = document.createElement('span'); span.style.marginLeft='0.2rem'; span.textContent = `${p.symbol} ${p.name}`;
+    label.appendChild(chk); label.appendChild(span);
+    wrap.appendChild(label);
+  });
+}
+
 function loadLibraryFromStorage() {
   try {
-    const d = localStorage.getItem('fairyChessLibrary');
+    const d = localStorage.getItem("fairyChessLibrary");
     if (d) {
       pieceLibrary = JSON.parse(d);
     } else {
       // No saved library — populate with standard-piece templates as defaults
-      const keys = ['K','Q','R','B','N','P'];
-      pieceLibrary = keys.map((k,i) => {
+      const keys = ["K", "Q", "R", "B", "N", "P"];
+      pieceLibrary = keys.map((k, i) => {
         const t = TEMPLATES[k];
         return {
-          id: -(i+1),
+          id: -(i + 1),
           name: t.name,
           symbol: t.symbol,
-          abbr: t.abbr || (t.name ? t.name[0].toUpperCase() : ''),
-          desc: t.desc || '',
+          abbr: t.abbr || (t.name ? t.name[0].toUpperCase() : ""),
+          desc: t.desc || "",
           value: t.value || 0,
           royal: t.royal || false,
           hopper: t.hopper || false,
           firstMove: t.firstMove || (t.isPawn ? true : false),
           firstMoveExtra: t.firstMoveExtra || 1,
-          promotable: (t.promotable !== undefined) ? t.promotable : (t.promotes ? true : false),
+          promotable:
+            t.promotable !== undefined
+              ? t.promotable
+              : t.promotes
+                ? true
+                : false,
           promotes: t.promotes || false,
-          castlingRole: t.castlingRole || 'none',
-          grid: t.grid.map(row => [...row]),
+          promotesTo: t.promotesTo || (k === 'P' ? ['Q','R','B','N'] : []),
+          castlingRole: t.castlingRole || "none",
+          grid: t.grid.map((row) => [...row]),
         };
       });
       saveLibraryToStorage();
@@ -412,6 +474,18 @@ function loadPieceToEditor(id) {
   if (document.getElementById("opt-castling-role"))
     document.getElementById("opt-castling-role").value =
       piece.castlingRole || "none";
+  // build and set promotes-to options
+  const ptList = document.getElementById('promotes-to-list');
+  if (ptList) ptList.style.display = piece.promotes ? 'block' : 'none';
+  buildPromotesToOptions();
+  if (piece.promotesTo && piece.promotesTo.length) {
+    const opts = document.getElementById('promotes-to-options');
+    if (opts) {
+      opts.querySelectorAll('input[type="checkbox"]').forEach(chk => {
+        chk.checked = piece.promotesTo.includes(chk.value);
+      });
+    }
+  }
   moveGrid = piece.grid.map((row) => [...row]);
   syncGridDisplay();
   syncPreviewDisplay();
@@ -435,6 +509,8 @@ function clearEditor() {
   document.getElementById("opt-promotes").checked = false;
   if (document.getElementById("opt-castling-role"))
     document.getElementById("opt-castling-role").value = "none";
+  const ptList = document.getElementById('promotes-to-list');
+  if (ptList) { ptList.style.display = 'none'; buildPromotesToOptions(); }
   moveGrid = Array(9)
     .fill(null)
     .map(() => Array(9).fill(null));
@@ -565,6 +641,7 @@ const TEMPLATES = {
     isPawn: true,
     promotes: true,
     promotable: false,
+    promotesTo: ['Q','R','B','N'],
     firstMove: true,
     firstMoveExtra: 1,
     grid: (() => {
@@ -773,6 +850,36 @@ const TEMPLATES = {
       return g;
     })(),
   },
+    jumper: {
+      name: "Jumper",
+      symbol: "🦅",
+      abbr: "J",
+      desc: "Jumps over an adjacent piece to land two squares away (checker-style).",
+      value: 3,
+      royal: false,
+      grid: (() => {
+        const g = Array(9)
+          .fill(null)
+          .map(() => Array(9).fill(null));
+        // two-step jump positions (orthogonal and diagonal)
+        const deltas = [
+          [-2, 0],
+          [2, 0],
+          [0, -2],
+          [0, 2],
+          [-2, -2],
+          [-2, 2],
+          [2, -2],
+          [2, 2],
+        ];
+        deltas.forEach(([dr, dc]) => {
+          const r = 4 + dr,
+            c = 4 + dc;
+          if (r >= 0 && r < 9 && c >= 0 && c < 9) g[r][c] = "jump";
+        });
+        return g;
+      })(),
+    },
 };
 
 function loadTemplate(key) {
@@ -1269,9 +1376,20 @@ function fairyPieceMoves(row, col, color, b, piece) {
   for (let gr = 0; gr < 9; gr++)
     for (let gc = 0; gc < 9; gc++) {
       if (!grid[gr][gc]) continue;
-      const dr = gr - 4;
-      const dc = gc - 4;
+      // Interpret the editor grid so that "up" (smaller row index)
+      // represents the designer's forward direction. To make moves
+      // behave intuitively for both sides, flip the row-delta for
+      // white pieces so painting forward on the editor applies to
+      // white as well as black.
+      const rawDr = gr - 4;
+      const rawDc = gc - 4;
+      // Treat the editor grid as 'forward' = up on the 9x9 canvas.
+      // Flip the row-delta for white pieces so a cell painted above
+      // the center represents forward for white as well as for black.
+      const dr = rawDr * (color === "white" ? -1 : 1);
+      const dc = rawDc;
       const type = grid[gr][gc];
+      
 
       if (type === "move" || type === "leap") {
         const r = row + dr,
@@ -1289,6 +1407,33 @@ function fairyPieceMoves(row, col, color, b, piece) {
           moves.push({ r, c });
           r += dr;
           c += dc;
+        }
+      } else if (type === "jump") {
+        // Jumping capture (like checkers): landing square at (row+dr, col+dc)
+        // requires an enemy piece on the midpoint and an empty landing.
+        // Only consider jumps where dr and dc are even (so midpoint is integer).
+        if (dr % 2 === 0 && dc % 2 === 0) {
+          // Check both directions so grid cells work regardless of which
+          // side (forward/back) the designer painted on the 9x9 editor.
+          const tried = new Set();
+          [[dr, dc], [-dr, -dc]].forEach(([cdr, cdc]) => {
+            const midR = row + cdr / 2;
+            const midC = col + cdc / 2;
+            const tr = row + cdr;
+            const tc = col + cdc;
+            const key = tr + "," + tc;
+            if (tried.has(key)) return;
+            tried.add(key);
+            if (
+              inBounds(tr, tc) &&
+              inBounds(midR, midC) &&
+              !b[tr][tc] &&
+              b[midR][midC] &&
+              b[midR][midC].color !== color
+            ) {
+              moves.push({ r: tr, c: tc, jump: { mr: midR, mc: midC } });
+            }
+          });
         }
       } else if (type === "capture") {
         const r = row + dr,
@@ -1388,6 +1533,9 @@ function simulateMove(fr, fc, tr, tc, mv) {
     epPiece: null,
     epR: null,
     epC: null,
+    jumpCaptured: null,
+    jumpR: null,
+    jumpC: null,
   };
   board[tr][tc] = board[fr][fc];
   board[fr][fc] = null;
@@ -1413,6 +1561,13 @@ function simulateMove(fr, fc, tr, tc, mv) {
     saved.castleKind = mv.castle;
     saved.backRank = br;
   }
+  // Handle simulated jump-capture (remove midpoint piece)
+  if (mv?.jump) {
+    saved.jumpR = mv.jump.mr;
+    saved.jumpC = mv.jump.mc;
+    saved.jumpCaptured = board[saved.jumpR][saved.jumpC];
+    board[saved.jumpR][saved.jumpC] = null;
+  }
   return saved;
 }
 
@@ -1422,6 +1577,8 @@ function undoSimulate(saved) {
   enPassantSq = saved.enPassant;
   castlingRights = saved.cr;
   if (saved.epR !== null) board[saved.epR][saved.epC] = saved.epPiece;
+  if (saved.jumpCaptured !== null && saved.jumpR !== null)
+    board[saved.jumpR][saved.jumpC] = saved.jumpCaptured;
   if (saved.castleKind) {
     const br = saved.backRank;
     if (saved.castleKind === "king") {
@@ -1581,6 +1738,16 @@ function executeMove(fr, fc, tr, tc, mv) {
     enPassantSq = { r: tr - dir, c: tc };
   }
 
+  // Jump-capture (e.g., checker-style) — remove the jumped piece
+  if (mv.jump) {
+    const mr = mv.jump.mr,
+      mc = mv.jump.mc;
+    const jumped = board[mr][mc];
+    if (jumped)
+      (currentTurn === "white" ? capturedByWhite : capturedByBlack).push(jumped);
+    board[mr][mc] = null;
+  }
+
   // Castling — move the rook
   if (mv.castle) {
     const br = currentTurn === "white" ? 0 : 7;
@@ -1607,7 +1774,7 @@ function executeMove(fr, fc, tr, tc, mv) {
 
   // Record move notation
   const files = "abcdefgh";
-  const notation = `${def?.abbr ?? "?"}${files[fc]}${fr + 1}-${files[tc]}${tr + 1}${capturedPiece || mv.enPassant ? "x" : ""}`;
+  const notation = `${def?.abbr ?? "?"}${files[fc]}${fr + 1}-${files[tc]}${tr + 1}${capturedPiece || mv.enPassant || mv.jump ? "x" : ""}`;
   moveHistory.push({ text: notation, color: currentTurn });
 
   // Post-move continuation (shared between normal moves and promotion)
@@ -1656,7 +1823,7 @@ function executeMove(fr, fc, tr, tc, mv) {
     renderBoard();
     renderMoveHistory();
     renderCaptured();
-    showPromotionDialog(currentTurn, (chosenType) => {
+    showPromotionDialog(currentTurn, movingPiece.type, (chosenType) => {
       if (chosenType.startsWith("fairy_")) {
         const id = parseInt(chosenType.replace("fairy_", ""));
         const fp = pieceLibrary.find((p) => p.id === id);
@@ -1679,16 +1846,34 @@ function executeMove(fr, fc, tr, tc, mv) {
 // PROMOTION DIALOG
 // ═══════════════════════════════════════════════════════════
 
-function showPromotionDialog(color, callback) {
+function showPromotionDialog(color, promoterType, callback) {
   const choices = [];
-  ["Q", "R", "B", "N"].forEach((type) =>
-    choices.push({ type, def: STANDARD_PIECES[type] }),
-  );
-  pieceLibrary
-    .filter((p) => p.promotable !== false)
-    .forEach((p) => {
-      choices.push({ type: "fairy_" + p.id, def: p });
+  const promoterDef = activeGamePieces[promoterType];
+
+  // If promoter defines explicit targets, use them
+  if (promoterDef && Array.isArray(promoterDef.promotesTo) && promoterDef.promotesTo.length) {
+    promoterDef.promotesTo.forEach((t) => {
+      if (typeof t !== 'string') return;
+      if (t.startsWith('fairy_')) {
+        const id = parseInt(t.replace('fairy_', ''));
+        const p = pieceLibrary.find(pp => pp.id === id);
+        if (p) choices.push({ type: t, def: p });
+      } else {
+        const def = TEMPLATES[t] || STANDARD_PIECES[t];
+        if (def) choices.push({ type: t, def });
+      }
     });
+  } else {
+    // fallback: standard queen/rook/bishop/knight plus promotable custom pieces
+    ["Q", "R", "B", "N"].forEach((type) =>
+      choices.push({ type, def: STANDARD_PIECES[type] }),
+    );
+    pieceLibrary
+      .filter((p) => p.promotable !== false)
+      .forEach((p) => {
+        choices.push({ type: "fairy_" + p.id, def: p });
+      });
+  }
 
   const overlay = document.getElementById("promo-overlay");
   const choicesEl = document.getElementById("promo-choices");

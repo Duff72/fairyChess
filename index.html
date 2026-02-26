@@ -108,6 +108,13 @@
             </button>
             <button
               class="move-type-btn"
+              data-type="jump"
+              onclick="setMoveType('jump', this)"
+            >
+              Jump (capture)
+            </button>
+            <button
+              class="move-type-btn"
               data-type="capture"
               onclick="setMoveType('capture', this)"
             >
@@ -142,6 +149,10 @@
             <div class="legend-item">
               <div class="legend-dot capture"></div>
               Capture only
+            </div>
+            <div class="legend-item">
+              <div class="legend-dot jump"></div>
+              Jump capture
             </div>
           </div>
 
@@ -220,6 +231,10 @@
               ><input type="checkbox" id="opt-promotes" /> This piece can
               promote (promotes on back rank)</label
             >
+          </div>
+          <div id="promotes-to-list" style="display:none;margin-top:0.6rem;">
+            <label style="display:block;font-size:0.85rem;color:var(--cream-dim);margin-bottom:0.4rem;">Promotes to (select allowed targets)</label>
+            <div id="promotes-to-options" style="display:flex;flex-wrap:wrap;gap:0.4rem;"></div>
           </div>
         </div>
 
@@ -337,6 +352,13 @@
               onclick="loadTemplate('grasshopper')"
             >
               Grasshopper
+            </button>
+            <button
+              class="btn-secondary"
+              style="width: 100%"
+              onclick="loadTemplate('jumper')"
+            >
+              Jumper (checker-like)
             </button>
           </div>
         </div>
